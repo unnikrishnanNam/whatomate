@@ -72,8 +72,8 @@ type AIContextResponse struct {
 	CreatedAt       string   `json:"created_at"`
 }
 
-// GetChatbotSettingsImpl returns chatbot settings and stats
-func (a *App) GetChatbotSettingsImpl(r *fastglue.Request) error {
+// GetChatbotSettings returns chatbot settings and stats
+func (a *App) GetChatbotSettings(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -113,8 +113,8 @@ func (a *App) GetChatbotSettingsImpl(r *fastglue.Request) error {
 	})
 }
 
-// UpdateChatbotSettingsImpl updates chatbot settings
-func (a *App) UpdateChatbotSettingsImpl(r *fastglue.Request) error {
+// UpdateChatbotSettings updates chatbot settings
+func (a *App) UpdateChatbotSettings(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -189,8 +189,8 @@ func (a *App) UpdateChatbotSettingsImpl(r *fastglue.Request) error {
 	})
 }
 
-// ListKeywordRulesImpl lists all keyword rules for the organization
-func (a *App) ListKeywordRulesImpl(r *fastglue.Request) error {
+// ListKeywordRules lists all keyword rules for the organization
+func (a *App) ListKeywordRules(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -224,8 +224,8 @@ func (a *App) ListKeywordRulesImpl(r *fastglue.Request) error {
 	})
 }
 
-// CreateKeywordRuleImpl creates a new keyword rule
-func (a *App) CreateKeywordRuleImpl(r *fastglue.Request) error {
+// CreateKeywordRule creates a new keyword rule
+func (a *App) CreateKeywordRule(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -282,8 +282,8 @@ func (a *App) CreateKeywordRuleImpl(r *fastglue.Request) error {
 	})
 }
 
-// GetKeywordRuleImpl gets a single keyword rule
-func (a *App) GetKeywordRuleImpl(r *fastglue.Request) error {
+// GetKeywordRule gets a single keyword rule
+func (a *App) GetKeywordRule(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -316,8 +316,8 @@ func (a *App) GetKeywordRuleImpl(r *fastglue.Request) error {
 	return r.SendEnvelope(response)
 }
 
-// UpdateKeywordRuleImpl updates a keyword rule
-func (a *App) UpdateKeywordRuleImpl(r *fastglue.Request) error {
+// UpdateKeywordRule updates a keyword rule
+func (a *App) UpdateKeywordRule(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -380,8 +380,8 @@ func (a *App) UpdateKeywordRuleImpl(r *fastglue.Request) error {
 	})
 }
 
-// DeleteKeywordRuleImpl deletes a keyword rule
-func (a *App) DeleteKeywordRuleImpl(r *fastglue.Request) error {
+// DeleteKeywordRule deletes a keyword rule
+func (a *App) DeleteKeywordRule(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -406,8 +406,8 @@ func (a *App) DeleteKeywordRuleImpl(r *fastglue.Request) error {
 	})
 }
 
-// ListChatbotFlowsImpl lists all chatbot flows
-func (a *App) ListChatbotFlowsImpl(r *fastglue.Request) error {
+// ListChatbotFlows lists all chatbot flows
+func (a *App) ListChatbotFlows(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -457,8 +457,8 @@ type FlowStepRequest struct {
 	MaxRetries      int                      `json:"max_retries"`
 }
 
-// CreateChatbotFlowImpl creates a new chatbot flow
-func (a *App) CreateChatbotFlowImpl(r *fastglue.Request) error {
+// CreateChatbotFlow creates a new chatbot flow
+func (a *App) CreateChatbotFlow(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -552,8 +552,8 @@ func (a *App) CreateChatbotFlowImpl(r *fastglue.Request) error {
 	})
 }
 
-// GetChatbotFlowImpl gets a single chatbot flow with steps
-func (a *App) GetChatbotFlowImpl(r *fastglue.Request) error {
+// GetChatbotFlow gets a single chatbot flow with steps
+func (a *App) GetChatbotFlow(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -577,8 +577,8 @@ func (a *App) GetChatbotFlowImpl(r *fastglue.Request) error {
 	return r.SendEnvelope(flow)
 }
 
-// UpdateChatbotFlowImpl updates a chatbot flow
-func (a *App) UpdateChatbotFlowImpl(r *fastglue.Request) error {
+// UpdateChatbotFlow updates a chatbot flow
+func (a *App) UpdateChatbotFlow(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -697,8 +697,8 @@ func (a *App) UpdateChatbotFlowImpl(r *fastglue.Request) error {
 	})
 }
 
-// DeleteChatbotFlowImpl deletes a chatbot flow
-func (a *App) DeleteChatbotFlowImpl(r *fastglue.Request) error {
+// DeleteChatbotFlow deletes a chatbot flow
+func (a *App) DeleteChatbotFlow(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -736,8 +736,8 @@ func (a *App) DeleteChatbotFlowImpl(r *fastglue.Request) error {
 	})
 }
 
-// ListAIContextsImpl lists all AI contexts
-func (a *App) ListAIContextsImpl(r *fastglue.Request) error {
+// ListAIContexts lists all AI contexts
+func (a *App) ListAIContexts(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -769,8 +769,8 @@ func (a *App) ListAIContextsImpl(r *fastglue.Request) error {
 	})
 }
 
-// CreateAIContextImpl creates a new AI context
-func (a *App) CreateAIContextImpl(r *fastglue.Request) error {
+// CreateAIContext creates a new AI context
+func (a *App) CreateAIContext(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -817,8 +817,8 @@ func (a *App) CreateAIContextImpl(r *fastglue.Request) error {
 	})
 }
 
-// GetAIContextImpl gets a single AI context
-func (a *App) GetAIContextImpl(r *fastglue.Request) error {
+// GetAIContext gets a single AI context
+func (a *App) GetAIContext(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -838,8 +838,8 @@ func (a *App) GetAIContextImpl(r *fastglue.Request) error {
 	return r.SendEnvelope(ctx)
 }
 
-// UpdateAIContextImpl updates an AI context
-func (a *App) UpdateAIContextImpl(r *fastglue.Request) error {
+// UpdateAIContext updates an AI context
+func (a *App) UpdateAIContext(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -897,8 +897,8 @@ func (a *App) UpdateAIContextImpl(r *fastglue.Request) error {
 	})
 }
 
-// DeleteAIContextImpl deletes an AI context
-func (a *App) DeleteAIContextImpl(r *fastglue.Request) error {
+// DeleteAIContext deletes an AI context
+func (a *App) DeleteAIContext(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -923,8 +923,8 @@ func (a *App) DeleteAIContextImpl(r *fastglue.Request) error {
 	})
 }
 
-// ListChatbotSessionsImpl lists chatbot sessions
-func (a *App) ListChatbotSessionsImpl(r *fastglue.Request) error {
+// ListChatbotSessions lists chatbot sessions
+func (a *App) ListChatbotSessions(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
@@ -950,8 +950,8 @@ func (a *App) ListChatbotSessionsImpl(r *fastglue.Request) error {
 	})
 }
 
-// GetChatbotSessionImpl gets a single chatbot session with messages
-func (a *App) GetChatbotSessionImpl(r *fastglue.Request) error {
+// GetChatbotSession gets a single chatbot session with messages
+func (a *App) GetChatbotSession(r *fastglue.Request) error {
 	orgID, err := a.getOrgIDFromContext(r)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")

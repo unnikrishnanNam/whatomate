@@ -213,7 +213,7 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger) {
 	g.POST("/api/campaigns/{id}/start", app.StartCampaign)
 	g.POST("/api/campaigns/{id}/pause", app.PauseCampaign)
 	g.POST("/api/campaigns/{id}/cancel", app.CancelCampaign)
-	g.GET("/api/campaigns/{id}/progress", app.GetCampaignProgress)
+	g.GET("/api/campaigns/{id}/progress", app.GetCampaign)
 	g.POST("/api/campaigns/{id}/recipients/import", app.ImportRecipients)
 	g.GET("/api/campaigns/{id}/recipients", app.GetCampaignRecipients)
 
@@ -252,8 +252,7 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger) {
 	g.GET("/api/chatbot/sessions/{id}", app.GetChatbotSession)
 
 	// Analytics
-	g.GET("/api/analytics/dashboard", app.GetAnalyticsOverview)
-	g.GET("/api/analytics/overview", app.GetAnalyticsOverview)
+	g.GET("/api/analytics/dashboard", app.GetDashboardStats)
 	g.GET("/api/analytics/messages", app.GetMessageAnalytics)
 	g.GET("/api/analytics/chatbot", app.GetChatbotAnalytics)
 

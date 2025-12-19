@@ -46,8 +46,8 @@ type MessageResponse struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// ListContactsImpl returns all contacts for the organization
-func (a *App) ListContactsImpl(r *fastglue.Request) error {
+// ListContacts returns all contacts for the organization
+func (a *App) ListContacts(r *fastglue.Request) error {
 	orgID := r.RequestCtx.UserValue("organization_id").(uuid.UUID)
 
 	// Pagination
@@ -124,8 +124,8 @@ func (a *App) ListContactsImpl(r *fastglue.Request) error {
 	})
 }
 
-// GetContactImpl returns a single contact
-func (a *App) GetContactImpl(r *fastglue.Request) error {
+// GetContact returns a single contact
+func (a *App) GetContact(r *fastglue.Request) error {
 	orgID := r.RequestCtx.UserValue("organization_id").(uuid.UUID)
 	contactIDStr := r.RequestCtx.UserValue("id").(string)
 
@@ -172,8 +172,8 @@ func (a *App) GetContactImpl(r *fastglue.Request) error {
 	return r.SendEnvelope(response)
 }
 
-// GetMessagesImpl returns messages for a contact
-func (a *App) GetMessagesImpl(r *fastglue.Request) error {
+// GetMessages returns messages for a contact
+func (a *App) GetMessages(r *fastglue.Request) error {
 	orgID := r.RequestCtx.UserValue("organization_id").(uuid.UUID)
 	contactIDStr := r.RequestCtx.UserValue("id").(string)
 
@@ -198,7 +198,6 @@ func (a *App) GetMessagesImpl(r *fastglue.Request) error {
 	if limit < 1 || limit > 100 {
 		limit = 50
 	}
-	offset := (page - 1) * limit
 
 	var messages []models.Message
 	var total int64
@@ -206,7 +205,15 @@ func (a *App) GetMessagesImpl(r *fastglue.Request) error {
 	query := a.DB.Where("contact_id = ?", contactID)
 	query.Model(&models.Message{}).Count(&total)
 
-	// Order by created_at ascending (oldest first for chat display)
+	// For chat, we want the most recent messages
+	// Fetch in DESC order (newest first), then reverse for display
+	// Calculate offset from the end for pagination
+	offset := int(total) - (page * limit)
+	if offset < 0 {
+		limit = limit + offset // Adjust limit if we're on the last page
+		offset = 0
+	}
+
 	if err := query.Order("created_at ASC").Offset(offset).Limit(limit).Find(&messages).Error; err != nil {
 		a.Log.Error("Failed to list messages", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to list messages", nil, "")
@@ -261,8 +268,8 @@ type SendMessageRequest struct {
 	} `json:"content"`
 }
 
-// SendMessageImpl sends a message to a contact
-func (a *App) SendMessageImpl(r *fastglue.Request) error {
+// SendMessage sends a message to a contact
+func (a *App) SendMessage(r *fastglue.Request) error {
 	orgID := r.RequestCtx.UserValue("organization_id").(uuid.UUID)
 	contactIDStr := r.RequestCtx.UserValue("id").(string)
 
