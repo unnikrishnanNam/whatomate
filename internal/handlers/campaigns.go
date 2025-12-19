@@ -1,16 +1,14 @@
 package handlers
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/valyala/fasthttp"
 	"github.com/shridarpatil/whatomate/internal/models"
+	"github.com/shridarpatil/whatomate/pkg/whatsapp"
+	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
 
@@ -622,9 +620,9 @@ func (a *App) processCampaign(campaignID uuid.UUID) {
 		} else {
 			a.Log.Info("Message sent", "recipient", recipient.PhoneNumber, "message_id", messageID)
 			a.DB.Model(&recipient).Updates(map[string]interface{}{
-				"status":              "sent",
+				"status":               "sent",
 				"whats_app_message_id": messageID,
-				"sent_at":             now,
+				"sent_at":              now,
 			})
 			sentCount++
 		}
@@ -653,10 +651,15 @@ func (a *App) processCampaign(campaignID uuid.UUID) {
 
 // sendTemplateMessage sends a template message via WhatsApp Cloud API
 func (a *App) sendTemplateMessage(account *models.WhatsAppAccount, template *models.Template, recipient *models.BulkMessageRecipient) (string, error) {
-	url := fmt.Sprintf("https://graph.facebook.com/%s/%s/messages", account.APIVersion, account.PhoneID)
+	waAccount := &whatsapp.Account{
+		PhoneID:     account.PhoneID,
+		BusinessID:  account.BusinessID,
+		APIVersion:  account.APIVersion,
+		AccessToken: account.AccessToken,
+	}
 
 	// Build template components with parameters
-	components := []map[string]interface{}{}
+	var components []map[string]interface{}
 
 	// Add body parameters if template has variables
 	if recipient.TemplateParams != nil && len(recipient.TemplateParams) > 0 {
@@ -678,65 +681,6 @@ func (a *App) sendTemplateMessage(account *models.WhatsAppAccount, template *mod
 		}
 	}
 
-	payload := map[string]interface{}{
-		"messaging_product": "whatsapp",
-		"to":                recipient.PhoneNumber,
-		"type":              "template",
-		"template": map[string]interface{}{
-			"name":     template.Name,
-			"language": map[string]string{"code": template.Language},
-		},
-	}
-
-	if len(components) > 0 {
-		payload["template"].(map[string]interface{})["components"] = components
-	}
-
-	jsonPayload, err := json.Marshal(payload)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal payload: %w", err)
-	}
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+account.AccessToken)
-
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-
-	if resp.StatusCode != 200 {
-		var errResp struct {
-			Error struct {
-				Message string `json:"message"`
-				Code    int    `json:"code"`
-			} `json:"error"`
-		}
-		json.Unmarshal(body, &errResp)
-		return "", fmt.Errorf("API error %d: %s", errResp.Error.Code, errResp.Error.Message)
-	}
-
-	var result struct {
-		Messages []struct {
-			ID string `json:"id"`
-		} `json:"messages"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return "", fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	if len(result.Messages) > 0 {
-		return result.Messages[0].ID, nil
-	}
-
-	return "", fmt.Errorf("no message ID in response")
+	ctx := context.Background()
+	return a.WhatsApp.SendTemplateMessageWithComponents(ctx, waAccount, recipient.PhoneNumber, template.Name, template.Language, components)
 }

@@ -3,8 +3,8 @@ package handlers
 import (
 	"time"
 
-	"github.com/valyala/fasthttp"
 	"github.com/shridarpatil/whatomate/internal/models"
+	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
 

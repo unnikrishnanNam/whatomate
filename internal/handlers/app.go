@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/shridarpatil/whatomate/internal/config"
+	"github.com/shridarpatil/whatomate/pkg/whatsapp"
 	"github.com/zerodha/fastglue"
 	"github.com/zerodha/logf"
 	"gorm.io/gorm"
@@ -13,10 +14,11 @@ import (
 
 // App holds all dependencies for handlers
 type App struct {
-	Config *config.Config
-	DB     *gorm.DB
-	Redis  *redis.Client
-	Log    logf.Logger
+	Config   *config.Config
+	DB       *gorm.DB
+	Redis    *redis.Client
+	Log      logf.Logger
+	WhatsApp *whatsapp.Client
 }
 
 // getOrgIDFromContext extracts organization ID from request context (set by auth middleware)

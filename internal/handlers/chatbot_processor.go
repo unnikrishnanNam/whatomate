@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shridarpatil/whatomate/internal/models"
+	"github.com/shridarpatil/whatomate/pkg/whatsapp"
 	"gorm.io/gorm"
 )
 
@@ -259,88 +261,25 @@ func (a *App) matchKeywordRules(orgID uuid.UUID, accountName, messageText string
 
 // sendTextMessage sends a text message via WhatsApp Cloud API
 func (a *App) sendTextMessage(account *models.WhatsAppAccount, to, message string) error {
-	url := fmt.Sprintf("https://graph.facebook.com/%s/%s/messages", account.APIVersion, account.PhoneID)
-
-	payload := map[string]interface{}{
-		"messaging_product": "whatsapp",
-		"recipient_type":    "individual",
-		"to":                to,
-		"type":              "text",
-		"text": map[string]interface{}{
-			"preview_url": false,
-			"body":        message,
-		},
+	waAccount := &whatsapp.Account{
+		PhoneID:     account.PhoneID,
+		BusinessID:  account.BusinessID,
+		APIVersion:  account.APIVersion,
+		AccessToken: account.AccessToken,
 	}
-
-	jsonPayload, err := json.Marshal(payload)
-	if err != nil {
-		a.Log.Error("Failed to marshal message payload", "error", err)
-		return err
-	}
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
-	if err != nil {
-		a.Log.Error("Failed to create request", "error", err)
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+account.AccessToken)
-
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		a.Log.Error("Failed to send message", "error", err)
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-
-	if resp.StatusCode != 200 {
-		var errResp struct {
-			Error struct {
-				Message string `json:"message"`
-				Code    int    `json:"code"`
-			} `json:"error"`
-		}
-		json.Unmarshal(body, &errResp)
-		a.Log.Error("WhatsApp API error",
-			"status", resp.StatusCode,
-			"code", errResp.Error.Code,
-			"message", errResp.Error.Message,
-		)
-		return fmt.Errorf("API error %d: %s", errResp.Error.Code, errResp.Error.Message)
-	}
-
-	var result struct {
-		Messages []struct {
-			ID string `json:"id"`
-		} `json:"messages"`
-	}
-	json.Unmarshal(body, &result)
-
-	if len(result.Messages) > 0 {
-		a.Log.Info("Message sent successfully", "message_id", result.Messages[0].ID, "to", to)
-	}
-
-	return nil
+	ctx := context.Background()
+	_, err := a.WhatsApp.SendTextMessage(ctx, waAccount, to, message)
+	return err
 }
 
 // sendInteractiveButtons sends an interactive button or list message via WhatsApp Cloud API
 // If 3 or fewer buttons, sends as button message; if more than 3, sends as list message (max 10)
 func (a *App) sendInteractiveButtons(account *models.WhatsAppAccount, to, bodyText string, buttons []map[string]interface{}) error {
-	url := fmt.Sprintf("https://graph.facebook.com/%s/%s/messages", account.APIVersion, account.PhoneID)
-
-	// Collect valid buttons (max 10 for list, max 3 for buttons)
-	validButtons := make([]struct {
-		id    string
-		title string
-	}, 0, 10)
-
+	// Convert buttons to whatsapp.Button format
+	waButtons := make([]whatsapp.Button, 0, len(buttons))
 	for i, btn := range buttons {
 		if i >= 10 {
-			break // WhatsApp allows max 10 items in a list
+			break
 		}
 		buttonID, _ := btn["id"].(string)
 		buttonTitle, _ := btn["title"].(string)
@@ -350,143 +289,25 @@ func (a *App) sendInteractiveButtons(account *models.WhatsAppAccount, to, bodyTe
 		if buttonTitle == "" {
 			continue
 		}
-		validButtons = append(validButtons, struct {
-			id    string
-			title string
-		}{id: buttonID, title: buttonTitle})
+		waButtons = append(waButtons, whatsapp.Button{
+			ID:    buttonID,
+			Title: buttonTitle,
+		})
 	}
 
-	if len(validButtons) == 0 {
-		// No valid buttons, fall back to text message
+	if len(waButtons) == 0 {
 		return a.sendTextMessage(account, to, bodyText)
 	}
 
-	var payload map[string]interface{}
-
-	if len(validButtons) <= 3 {
-		// Use button format for 3 or fewer options
-		buttonActions := make([]map[string]interface{}, 0, 3)
-		for _, btn := range validButtons {
-			title := btn.title
-			// Truncate title to 20 chars (WhatsApp button limit)
-			if len(title) > 20 {
-				title = title[:20]
-			}
-			buttonActions = append(buttonActions, map[string]interface{}{
-				"type": "reply",
-				"reply": map[string]interface{}{
-					"id":    btn.id,
-					"title": title,
-				},
-			})
-		}
-
-		payload = map[string]interface{}{
-			"messaging_product": "whatsapp",
-			"recipient_type":    "individual",
-			"to":                to,
-			"type":              "interactive",
-			"interactive": map[string]interface{}{
-				"type": "button",
-				"body": map[string]interface{}{
-					"text": bodyText,
-				},
-				"action": map[string]interface{}{
-					"buttons": buttonActions,
-				},
-			},
-		}
-	} else {
-		// Use list format for more than 3 options (up to 10)
-		rows := make([]map[string]interface{}, 0, 10)
-		for _, btn := range validButtons {
-			title := btn.title
-			// Truncate title to 24 chars (WhatsApp list row title limit)
-			if len(title) > 24 {
-				title = title[:24]
-			}
-			rows = append(rows, map[string]interface{}{
-				"id":    btn.id,
-				"title": title,
-			})
-		}
-
-		payload = map[string]interface{}{
-			"messaging_product": "whatsapp",
-			"recipient_type":    "individual",
-			"to":                to,
-			"type":              "interactive",
-			"interactive": map[string]interface{}{
-				"type": "list",
-				"body": map[string]interface{}{
-					"text": bodyText,
-				},
-				"action": map[string]interface{}{
-					"button": "Select an option",
-					"sections": []map[string]interface{}{
-						{
-							"title": "Options",
-							"rows":  rows,
-						},
-					},
-				},
-			},
-		}
+	waAccount := &whatsapp.Account{
+		PhoneID:     account.PhoneID,
+		BusinessID:  account.BusinessID,
+		APIVersion:  account.APIVersion,
+		AccessToken: account.AccessToken,
 	}
-
-	jsonPayload, err := json.Marshal(payload)
-	if err != nil {
-		a.Log.Error("Failed to marshal interactive message payload", "error", err)
-		return err
-	}
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
-	if err != nil {
-		a.Log.Error("Failed to create request", "error", err)
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+account.AccessToken)
-
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		a.Log.Error("Failed to send interactive message", "error", err)
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-
-	if resp.StatusCode != 200 {
-		var errResp struct {
-			Error struct {
-				Message string `json:"message"`
-				Code    int    `json:"code"`
-			} `json:"error"`
-		}
-		json.Unmarshal(body, &errResp)
-		a.Log.Error("WhatsApp API error",
-			"status", resp.StatusCode,
-			"code", errResp.Error.Code,
-			"message", errResp.Error.Message,
-		)
-		return fmt.Errorf("API error %d: %s", errResp.Error.Code, errResp.Error.Message)
-	}
-
-	var result struct {
-		Messages []struct {
-			ID string `json:"id"`
-		} `json:"messages"`
-	}
-	json.Unmarshal(body, &result)
-
-	if len(result.Messages) > 0 {
-		a.Log.Info("Interactive message sent successfully", "message_id", result.Messages[0].ID, "to", to)
-	}
-
-	return nil
+	ctx := context.Background()
+	_, err := a.WhatsApp.SendInteractiveButtons(ctx, waAccount, to, bodyText, waButtons)
+	return err
 }
 
 // getOrCreateContact finds or creates a contact for the phone number
@@ -800,14 +621,14 @@ func (a *App) sendFlowCompletionWebhook(flow *models.ChatbotFlow, session *model
 
 	// Build the payload
 	payload := map[string]interface{}{
-		"flow_id":        flow.ID.String(),
-		"flow_name":      flow.Name,
-		"session_id":     session.ID.String(),
-		"phone_number":   session.PhoneNumber,
-		"contact_id":     contact.ID.String(),
-		"contact_name":   contact.ProfileName,
-		"session_data":   session.SessionData,
-		"completed_at":   time.Now().UTC().Format(time.RFC3339),
+		"flow_id":      flow.ID.String(),
+		"flow_name":    flow.Name,
+		"session_id":   session.ID.String(),
+		"phone_number": session.PhoneNumber,
+		"contact_id":   contact.ID.String(),
+		"contact_name": contact.ProfileName,
+		"session_data": session.SessionData,
+		"completed_at": time.Now().UTC().Format(time.RFC3339),
 	}
 
 	// Allow custom body template if provided

@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/valyala/fasthttp"
 	"github.com/shridarpatil/whatomate/internal/models"
+	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 	"gorm.io/gorm"
 )
@@ -51,13 +51,13 @@ type KeywordRuleResponse struct {
 
 // ChatbotFlowResponse represents a chatbot flow for API response
 type ChatbotFlowResponse struct {
-	ID              string `json:"id"`
-	Name            string `json:"name"`
-	Description     string `json:"description"`
+	ID              string   `json:"id"`
+	Name            string   `json:"name"`
+	Description     string   `json:"description"`
 	TriggerKeywords []string `json:"trigger_keywords"`
-	Enabled         bool   `json:"enabled"`
-	StepsCount      int    `json:"steps_count"`
-	CreatedAt       string `json:"created_at"`
+	Enabled         bool     `json:"enabled"`
+	StepsCount      int      `json:"steps_count"`
+	CreatedAt       string   `json:"created_at"`
 }
 
 // AIContextResponse represents an AI context for API response
@@ -465,15 +465,15 @@ func (a *App) CreateChatbotFlowImpl(r *fastglue.Request) error {
 	}
 
 	var req struct {
-		Name              string            `json:"name"`
-		Description       string            `json:"description"`
-		TriggerKeywords    []string               `json:"trigger_keywords"`
-		InitialMessage     string                 `json:"initial_message"`
-		CompletionMessage  string                 `json:"completion_message"`
-		OnCompleteAction   string                 `json:"on_complete_action"`
-		CompletionConfig   map[string]interface{} `json:"completion_config"`
-		Enabled            bool                   `json:"enabled"`
-		Steps              []FlowStepRequest      `json:"steps"`
+		Name              string                 `json:"name"`
+		Description       string                 `json:"description"`
+		TriggerKeywords   []string               `json:"trigger_keywords"`
+		InitialMessage    string                 `json:"initial_message"`
+		CompletionMessage string                 `json:"completion_message"`
+		OnCompleteAction  string                 `json:"on_complete_action"`
+		CompletionConfig  map[string]interface{} `json:"completion_config"`
+		Enabled           bool                   `json:"enabled"`
+		Steps             []FlowStepRequest      `json:"steps"`
 	}
 
 	if err := json.Unmarshal(r.RequestCtx.PostBody(), &req); err != nil {

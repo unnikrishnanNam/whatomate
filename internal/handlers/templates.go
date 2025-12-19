@@ -1,15 +1,14 @@
 package handlers
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/valyala/fasthttp"
 	"github.com/shridarpatil/whatomate/internal/models"
+	"github.com/shridarpatil/whatomate/pkg/whatsapp"
+	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
 
@@ -340,212 +339,27 @@ func (a *App) SubmitTemplate(r *fastglue.Request) error {
 
 // submitTemplateToMeta submits a template to Meta's API
 func (a *App) submitTemplateToMeta(account *models.WhatsAppAccount, template *models.Template) (string, error) {
-	url := fmt.Sprintf("https://graph.facebook.com/%s/%s/message_templates",
-		account.APIVersion, account.BusinessID)
-
-	// Build components array
-	components := []map[string]interface{}{}
-
-	// Body component (required) - add first as per Meta's expected order
-	body := map[string]interface{}{
-		"type": "BODY",
-		"text": template.BodyContent,
-	}
-	// Add examples if there are variables in body
-	if strings.Contains(template.BodyContent, "{{") {
-		bodyExamples := extractExamplesForComponent(template.SampleValues, "body")
-		if len(bodyExamples) > 0 {
-			body["example"] = map[string]interface{}{
-				"body_text": [][]string{bodyExamples},
-			}
-		} else {
-			// Count variables in body and return error if no samples provided
-			varCount := strings.Count(template.BodyContent, "{{")
-			if varCount > 0 {
-				return "", fmt.Errorf("sample values are required for template variables. Found %d variable(s) in body but no sample values provided", varCount)
-			}
-		}
-	}
-	components = append(components, body)
-
-	// Header component
-	if template.HeaderType != "" && template.HeaderType != "NONE" {
-		header := map[string]interface{}{
-			"type":   "HEADER",
-			"format": template.HeaderType,
-		}
-		switch template.HeaderType {
-		case "TEXT":
-			header["text"] = template.HeaderContent
-			// Add example if there are variables
-			if strings.Contains(template.HeaderContent, "{{") {
-				headerExamples := extractExamplesForComponent(template.SampleValues, "header")
-				if len(headerExamples) > 0 {
-					header["example"] = map[string]interface{}{
-						"header_text": headerExamples,
-					}
-				}
-			}
-		case "IMAGE", "VIDEO", "DOCUMENT":
-			// For media headers, we need example handle (media ID)
-			if template.HeaderContent != "" {
-				header["example"] = map[string]interface{}{
-					"header_handle": []string{template.HeaderContent},
-				}
-			}
-		}
-		components = append(components, header)
+	waAccount := &whatsapp.Account{
+		PhoneID:     account.PhoneID,
+		BusinessID:  account.BusinessID,
+		APIVersion:  account.APIVersion,
+		AccessToken: account.AccessToken,
 	}
 
-	// Footer component
-	if template.FooterContent != "" {
-		components = append(components, map[string]interface{}{
-			"type": "FOOTER",
-			"text": template.FooterContent,
-		})
+	submission := &whatsapp.TemplateSubmission{
+		Name:          template.Name,
+		Language:      template.Language,
+		Category:      template.Category,
+		HeaderType:    template.HeaderType,
+		HeaderContent: template.HeaderContent,
+		BodyContent:   template.BodyContent,
+		FooterContent: template.FooterContent,
+		Buttons:       template.Buttons,
+		SampleValues:  template.SampleValues,
 	}
 
-	// Buttons component
-	if len(template.Buttons) > 0 {
-		buttons := []map[string]interface{}{}
-		for _, btn := range template.Buttons {
-			if btnMap, ok := btn.(map[string]interface{}); ok {
-				btnType, _ := btnMap["type"].(string)
-				btnType = strings.ToUpper(btnType)
-				btnText, _ := btnMap["text"].(string)
-
-				// Skip buttons without text
-				if btnText == "" {
-					continue
-				}
-
-				button := map[string]interface{}{}
-
-				switch btnType {
-				case "QUICK_REPLY":
-					button["type"] = "QUICK_REPLY"
-					button["text"] = btnText
-				case "URL":
-					btnURL, _ := btnMap["url"].(string)
-					if btnURL == "" {
-						continue // Skip URL buttons without URL
-					}
-					button["type"] = "URL"
-					button["text"] = btnText
-					button["url"] = btnURL
-					// Add example if URL has variable
-					if strings.Contains(btnURL, "{{") {
-						if example, ok := btnMap["example"].(string); ok && example != "" {
-							button["example"] = []string{example}
-						}
-					}
-				case "PHONE_NUMBER":
-					phoneNum, _ := btnMap["phone_number"].(string)
-					if phoneNum == "" {
-						continue // Skip phone buttons without number
-					}
-					button["type"] = "PHONE_NUMBER"
-					button["text"] = btnText
-					button["phone_number"] = phoneNum
-				case "COPY_CODE":
-					button["type"] = "COPY_CODE"
-					button["text"] = btnText
-					if example, ok := btnMap["example"].(string); ok && example != "" {
-						button["example"] = example
-					}
-				default:
-					// Default to QUICK_REPLY if type is not recognized
-					button["type"] = "QUICK_REPLY"
-					button["text"] = btnText
-				}
-
-				if len(button) > 0 {
-					buttons = append(buttons, button)
-				}
-			}
-		}
-		if len(buttons) > 0 {
-			components = append(components, map[string]interface{}{
-				"type":    "BUTTONS",
-				"buttons": buttons,
-			})
-		}
-	}
-
-	// Build request payload
-	payload := map[string]interface{}{
-		"name":       template.Name,
-		"language":   template.Language,
-		"category":   template.Category,
-		"components": components,
-	}
-
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal payload: %w", err)
-	}
-
-	a.Log.Info("Submitting template to Meta", "url", url, "name", template.Name, "payload", string(payloadBytes))
-
-	req, err := http.NewRequest("POST", url, strings.NewReader(string(payloadBytes)))
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+account.AccessToken)
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, _ := io.ReadAll(resp.Body)
-
-	if resp.StatusCode != 200 {
-		a.Log.Error("Meta API error response", "status", resp.StatusCode, "body", string(respBody))
-		// Parse error response
-		var errorResp struct {
-			Error struct {
-				Message      string `json:"message"`
-				Type         string `json:"type"`
-				Code         int    `json:"code"`
-				ErrorUserMsg string `json:"error_user_msg"`
-				ErrorUserTitle string `json:"error_user_title"`
-				ErrorData    struct {
-					MessagingProduct string `json:"messaging_product"`
-					Details          string `json:"details"`
-				} `json:"error_data"`
-				ErrorSubcode int    `json:"error_subcode"`
-				FBTraceID    string `json:"fbtrace_id"`
-			} `json:"error"`
-		}
-		json.Unmarshal(respBody, &errorResp)
-
-		// Prefer error_user_msg (more descriptive), then error_data.details, then message
-		errMsg := errorResp.Error.ErrorUserMsg
-		if errMsg == "" && errorResp.Error.ErrorData.Details != "" {
-			errMsg = errorResp.Error.ErrorData.Details
-		}
-		if errMsg == "" {
-			errMsg = errorResp.Error.Message
-		}
-		if errMsg != "" {
-			return "", fmt.Errorf("%s", errMsg)
-		}
-		return "", fmt.Errorf("Meta API error (status %d): %s", resp.StatusCode, string(respBody))
-	}
-
-	// Parse success response
-	var result struct {
-		ID string `json:"id"`
-	}
-	if err := json.Unmarshal(respBody, &result); err != nil {
-		return "", fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	return result.ID, nil
+	ctx := context.Background()
+	return a.WhatsApp.SubmitTemplate(ctx, waAccount, submission)
 }
 
 // extractExamplesForComponent extracts example values for a specific component from sample_values
@@ -674,7 +488,12 @@ func (a *App) SyncTemplates(r *fastglue.Request) error {
 			case "FOOTER":
 				template.FooterContent = comp.Text
 			case "BUTTONS":
-				template.Buttons = convertToJSONBArray(comp.Buttons)
+				// Convert []TemplateButton to []interface{}
+				buttons := make([]interface{}, len(comp.Buttons))
+				for i, btn := range comp.Buttons {
+					buttons[i] = btn
+				}
+				template.Buttons = convertToJSONBArray(buttons)
 			}
 		}
 
@@ -698,71 +517,29 @@ func (a *App) SyncTemplates(r *fastglue.Request) error {
 	})
 }
 
-// Meta API types
-type MetaTemplate struct {
-	ID         string          `json:"id"`
-	Name       string          `json:"name"`
-	Language   string          `json:"language"`
-	Category   string          `json:"category"`
-	Status     string          `json:"status"`
-	Components []MetaComponent `json:"components"`
-}
-
-type MetaComponent struct {
-	Type    string        `json:"type"`
-	Format  string        `json:"format,omitempty"`
-	Text    string        `json:"text,omitempty"`
-	Buttons []interface{} `json:"buttons,omitempty"`
-}
-
-func (a *App) fetchTemplatesFromMeta(account *models.WhatsAppAccount) ([]MetaTemplate, error) {
-	url := fmt.Sprintf("https://graph.facebook.com/%s/%s/message_templates?limit=100",
-		account.APIVersion, account.BusinessID)
-
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("Authorization", "Bearer "+account.AccessToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("Meta API error: %s", string(body))
+func (a *App) fetchTemplatesFromMeta(account *models.WhatsAppAccount) ([]whatsapp.MetaTemplate, error) {
+	waAccount := &whatsapp.Account{
+		PhoneID:     account.PhoneID,
+		BusinessID:  account.BusinessID,
+		APIVersion:  account.APIVersion,
+		AccessToken: account.AccessToken,
 	}
 
-	var result struct {
-		Data []MetaTemplate `json:"data"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return nil, err
-	}
-
-	return result.Data, nil
+	ctx := context.Background()
+	return a.WhatsApp.FetchTemplates(ctx, waAccount)
 }
 
 func (a *App) deleteTemplateFromMeta(account *models.WhatsAppAccount, templateName string) {
-	url := fmt.Sprintf("https://graph.facebook.com/%s/%s/message_templates?name=%s",
-		account.APIVersion, account.BusinessID, templateName)
-
-	req, _ := http.NewRequest("DELETE", url, nil)
-	req.Header.Set("Authorization", "Bearer "+account.AccessToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		a.Log.Error("Failed to delete template from Meta", "error", err, "template", templateName)
-		return
+	waAccount := &whatsapp.Account{
+		PhoneID:     account.PhoneID,
+		BusinessID:  account.BusinessID,
+		APIVersion:  account.APIVersion,
+		AccessToken: account.AccessToken,
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
-		a.Log.Error("Meta API error deleting template", "status", resp.StatusCode, "body", string(body))
+	ctx := context.Background()
+	if err := a.WhatsApp.DeleteTemplate(ctx, waAccount, templateName); err != nil {
+		a.Log.Error("Failed to delete template from Meta", "error", err, "template", templateName)
 	}
 }
 

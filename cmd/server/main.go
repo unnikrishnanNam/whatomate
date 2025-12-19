@@ -8,12 +8,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/valyala/fasthttp"
 	"github.com/shridarpatil/whatomate/internal/config"
 	"github.com/shridarpatil/whatomate/internal/database"
 	"github.com/shridarpatil/whatomate/internal/frontend"
 	"github.com/shridarpatil/whatomate/internal/handlers"
 	"github.com/shridarpatil/whatomate/internal/middleware"
+	"github.com/shridarpatil/whatomate/pkg/whatsapp"
+	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 	"github.com/zerodha/logf"
 )
@@ -81,12 +82,16 @@ func main() {
 	// Initialize Fastglue
 	g := fastglue.NewGlue()
 
+	// Initialize WhatsApp client
+	waClient := whatsapp.New(lo)
+
 	// Initialize app with dependencies
 	app := &handlers.App{
-		Config: cfg,
-		DB:     db,
-		Redis:  rdb,
-		Log:    lo,
+		Config:   cfg,
+		DB:       db,
+		Redis:    rdb,
+		Log:      lo,
+		WhatsApp: waClient,
 	}
 
 	// Setup middleware
