@@ -170,6 +170,7 @@ class WebSocketService {
         direction: payload.direction,
         message_type: payload.message_type,
         content: payload.content,
+        interactive_data: payload.interactive_data,
         status: payload.status,
         wamid: payload.wamid,
         error_message: payload.error_message,
