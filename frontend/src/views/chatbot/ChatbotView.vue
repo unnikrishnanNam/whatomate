@@ -111,7 +111,10 @@ const statCards = [
           <p class="text-sm text-muted-foreground">Manage automated responses and AI conversations</p>
         </div>
         <div class="flex items-center gap-3">
-          <Badge :variant="settings.enabled ? 'default' : 'secondary'">
+          <Badge
+            variant="outline"
+            :class="settings.enabled ? 'border-green-600 text-green-600' : ''"
+          >
             {{ settings.enabled ? 'Active' : 'Inactive' }}
           </Badge>
           <Button
@@ -267,10 +270,10 @@ const statCards = [
               <div class="space-y-2">
                 <h4 class="font-medium text-sm">AI Provider</h4>
                 <div class="flex items-center gap-2">
-                  <Badge v-if="settings.ai_enabled" variant="default">
+                  <Badge v-if="settings.ai_enabled" variant="outline" class="border-green-600 text-green-600">
                     {{ settings.ai_provider || 'Not configured' }}
                   </Badge>
-                  <Badge v-else variant="secondary">Disabled</Badge>
+                  <Badge v-else variant="outline">Disabled</Badge>
                 </div>
               </div>
             </div>

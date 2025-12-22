@@ -222,7 +222,8 @@ onMounted(() => {
                   <TableCell>{{ formatDate(key.expires_at) }}</TableCell>
                   <TableCell>
                     <Badge
-                      :variant="isExpired(key.expires_at) ? 'destructive' : key.is_active ? 'default' : 'secondary'"
+                      variant="outline"
+                      :class="isExpired(key.expires_at) ? 'border-destructive text-destructive' : key.is_active ? 'border-green-600 text-green-600' : ''"
                     >
                       {{ isExpired(key.expires_at) ? 'Expired' : key.is_active ? 'Active' : 'Inactive' }}
                     </Badge>

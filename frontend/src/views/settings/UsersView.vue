@@ -393,7 +393,10 @@ function goToPage(page: number) {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge :variant="user.is_active ? 'default' : 'secondary'" class="capitalize">
+                    <Badge
+                      variant="outline"
+                      :class="user.is_active ? 'border-green-600 text-green-600' : ''"
+                    >
                       {{ user.is_active ? 'Active' : 'Inactive' }}
                     </Badge>
                   </TableCell>

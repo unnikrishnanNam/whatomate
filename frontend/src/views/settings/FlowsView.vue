@@ -327,16 +327,14 @@ async function syncFlows() {
   }
 }
 
-function getStatusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+function getStatusClass(status: string): string {
   switch (status) {
     case 'PUBLISHED':
-      return 'default'
-    case 'DRAFT':
-      return 'secondary'
+      return 'border-green-600 text-green-600'
     case 'DEPRECATED':
-      return 'destructive'
+      return 'border-destructive text-destructive'
     default:
-      return 'outline'
+      return ''
   }
 }
 
@@ -434,7 +432,7 @@ function formatDate(dateStr: string): string {
           </CardHeader>
           <CardContent>
             <div class="flex flex-wrap gap-2 mb-3">
-              <Badge :variant="getStatusVariant(flow.status)">
+              <Badge variant="outline" :class="getStatusClass(flow.status)">
                 {{ flow.status }}
               </Badge>
               <Badge v-if="flow.category" variant="outline">

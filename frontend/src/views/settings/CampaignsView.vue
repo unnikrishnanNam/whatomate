@@ -324,23 +324,19 @@ function getStatusIcon(status: string) {
   }
 }
 
-function getStatusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+function getStatusClass(status: string): string {
   switch (status) {
     case 'completed':
-      return 'default'
+      return 'border-green-600 text-green-600'
     case 'running':
     case 'processing':
     case 'queued':
-      return 'default'
-    case 'paused':
-      return 'secondary'
-    case 'scheduled':
-      return 'secondary'
+      return 'border-blue-600 text-blue-600'
     case 'failed':
     case 'cancelled':
-      return 'destructive'
+      return 'border-destructive text-destructive'
     default:
-      return 'outline'
+      return ''
   }
 }
 
@@ -423,17 +419,15 @@ async function addRecipients() {
   }
 }
 
-function getRecipientStatusBadge(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+function getRecipientStatusClass(status: string): string {
   switch (status) {
     case 'sent':
     case 'delivered':
-      return 'default'
-    case 'pending':
-      return 'secondary'
+      return 'border-green-600 text-green-600'
     case 'failed':
-      return 'destructive'
+      return 'border-destructive text-destructive'
     default:
-      return 'outline'
+      return ''
   }
 }
 
@@ -778,7 +772,7 @@ async function addRecipientsFromCSV() {
                   </p>
                 </div>
               </div>
-              <Badge :variant="getStatusVariant(campaign.status)">
+              <Badge variant="outline" :class="getStatusClass(campaign.status)">
                 <component :is="getStatusIcon(campaign.status)" class="h-3 w-3 mr-1" />
                 {{ campaign.status }}
               </Badge>
@@ -971,7 +965,7 @@ async function addRecipientsFromCSV() {
                   <td class="py-2 px-2 font-mono">{{ recipient.phone_number }}</td>
                   <td class="py-2 px-2">{{ recipient.recipient_name || '-' }}</td>
                   <td class="py-2 px-2">
-                    <Badge :variant="getRecipientStatusBadge(recipient.status)">
+                    <Badge variant="outline" :class="getRecipientStatusClass(recipient.status)">
                       {{ recipient.status }}
                     </Badge>
                   </td>
@@ -992,7 +986,7 @@ async function addRecipientsFromCSV() {
             <UserPlus class="h-4 w-4 mr-2" />
             Add More
           </Button>
-          <Button @click="showRecipientsDialog = false">Close</Button>
+          <Button variant="outline" @click="showRecipientsDialog = false">Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -398,7 +398,10 @@ const webhookUrl = window.location.origin + '/api/webhook'
                     </div>
                     <div class="flex items-center gap-2">
                       <span class="text-muted-foreground">Access Token:</span>
-                      <Badge :variant="account.has_access_token ? 'default' : 'destructive'">
+                      <Badge
+                        variant="outline"
+                        :class="account.has_access_token ? 'border-green-600 text-green-600' : 'border-destructive text-destructive'"
+                      >
                         {{ account.has_access_token ? 'Configured' : 'Missing' }}
                       </Badge>
                     </div>

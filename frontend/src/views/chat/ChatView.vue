@@ -431,7 +431,7 @@ function getMessageContent(message: Message): string {
                 <p class="font-medium">
                   {{ contactsStore.currentContact.name || contactsStore.currentContact.phone_number }}
                 </p>
-                <Badge v-if="activeTransferId" variant="secondary" class="text-xs">
+                <Badge v-if="activeTransferId" variant="outline" class="text-xs border-orange-500 text-orange-500">
                   Chatbot Paused
                 </Badge>
               </div>
