@@ -9,6 +9,7 @@ import (
 	"github.com/shridarpatil/whatomate/internal/websocket"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
+	"gorm.io/gorm/clause"
 )
 
 // CreateAgentTransferRequest represents the request to create an agent transfer
@@ -650,10 +651,17 @@ func (a *App) PickNextTransfer(r *fastglue.Request) error {
 		userTeamIDs = append(userTeamIDs, m.TeamID)
 	}
 
-	// Build query for picking transfer
-	query := a.DB.Where("organization_id = ? AND status = ? AND agent_id IS NULL", orgID, "active").
-		Preload("Contact").
-		Preload("Team").
+	// Use transaction with FOR UPDATE lock to prevent race conditions
+	tx := a.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Build query for picking transfer with row-level locking
+	query := tx.Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
+		Where("organization_id = ? AND status = ? AND agent_id IS NULL", orgID, "active").
 		Order("transferred_at ASC")
 
 	if teamIDStr != "" {
@@ -673,6 +681,7 @@ func (a *App) PickNextTransfer(r *fastglue.Request) error {
 						}
 					}
 					if !found {
+						tx.Rollback()
 						return r.SendErrorEnvelope(fasthttp.StatusForbidden, "You are not a member of this team", nil, "")
 					}
 				}
@@ -689,11 +698,12 @@ func (a *App) PickNextTransfer(r *fastglue.Request) error {
 	}
 	// Admin can pick from any queue if no team_id specified
 
-	// Find oldest unassigned active transfer (FIFO)
+	// Find oldest unassigned active transfer (FIFO) - locked row
 	var transfer models.AgentTransfer
 	result := query.First(&transfer)
 
 	if result.Error != nil {
+		tx.Rollback()
 		return r.SendEnvelope(map[string]any{
 			"message":  "No transfers in queue",
 			"transfer": nil,
@@ -706,13 +716,26 @@ func (a *App) PickNextTransfer(r *fastglue.Request) error {
 	if transfer.TransferredByUserID == nil {
 		transfer.TransferredByUserID = &userID
 	}
-	if err := a.DB.Save(&transfer).Error; err != nil {
+	if err := tx.Save(&transfer).Error; err != nil {
+		tx.Rollback()
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to pick transfer", nil, "")
 	}
 
-	// Update contact assignment
-	if transfer.Contact != nil {
-		a.DB.Model(transfer.Contact).Update("assigned_user_id", userID)
+	// Update contact assignment within transaction
+	if err := tx.Model(&models.Contact{}).Where("id = ?", transfer.ContactID).Update("assigned_user_id", userID).Error; err != nil {
+		tx.Rollback()
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to update contact assignment", nil, "")
+	}
+
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to complete pickup", nil, "")
+	}
+
+	// Load related data for response (outside transaction)
+	a.DB.Where("id = ?", transfer.ContactID).First(&transfer.Contact)
+	if transfer.TeamID != nil {
+		a.DB.Where("id = ?", transfer.TeamID).First(&transfer.Team)
 	}
 
 	// Load agent info
