@@ -62,6 +62,12 @@ type IncomingTextMessage struct {
 		SHA256   string `json:"sha256"`
 		Caption  string `json:"caption,omitempty"`
 	} `json:"video,omitempty"`
+	Sticker *struct {
+		ID       string `json:"id"`
+		MimeType string `json:"mime_type"`
+		SHA256   string `json:"sha256"`
+		Animated bool   `json:"animated,omitempty"`
+	} `json:"sticker,omitempty"`
 	Context *struct {
 		From string `json:"from"`
 		ID   string `json:"id"` // WhatsApp message ID being replied to
@@ -212,6 +218,23 @@ func (a *App) processIncomingMessageFull(phoneNumberID string, msg IncomingTextM
 		}
 		if localPath, err := a.DownloadAndSaveMedia(context.Background(), msg.Audio.ID, msg.Audio.MimeType, waAccount); err != nil {
 			a.Log.Error("Failed to download audio", "error", err, "media_id", msg.Audio.ID)
+		} else {
+			mediaInfo.MediaURL = localPath
+		}
+	} else if msg.Type == "sticker" && msg.Sticker != nil {
+		// Handle sticker message (treat like image)
+		mediaInfo = &MediaInfo{
+			MediaMimeType: msg.Sticker.MimeType,
+		}
+		// Download and save media locally
+		waAccount := &whatsapp.Account{
+			PhoneID:     account.PhoneID,
+			BusinessID:  account.BusinessID,
+			APIVersion:  account.APIVersion,
+			AccessToken: account.AccessToken,
+		}
+		if localPath, err := a.DownloadAndSaveMedia(context.Background(), msg.Sticker.ID, msg.Sticker.MimeType, waAccount); err != nil {
+			a.Log.Error("Failed to download sticker", "error", err, "media_id", msg.Sticker.ID)
 		} else {
 			mediaInfo.MediaURL = localPath
 		}

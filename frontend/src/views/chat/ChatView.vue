@@ -498,7 +498,7 @@ function getMessageContent(message: Message): string {
     return message.content?.body || '[Interactive Message]'
   }
   // For media messages, return caption if available (media is displayed inline)
-  if (message.message_type === 'image' || message.message_type === 'video') {
+  if (message.message_type === 'image' || message.message_type === 'video' || message.message_type === 'sticker') {
     return message.content?.body || ''
   }
   if (message.message_type === 'audio') {
@@ -515,6 +515,9 @@ function getMessageContent(message: Message): string {
   }
   if (message.message_type === 'contacts') {
     return '' // Contacts are displayed as a card, not text
+  }
+  if (message.message_type === 'unsupported') {
+    return '[Unsupported message type]'
   }
   return '[Message]'
 }
@@ -989,6 +992,23 @@ async function sendMediaMessage() {
                     <span class="text-muted-foreground text-sm">[Image]</span>
                   </div>
                 </div>
+                <!-- Sticker message -->
+                <div v-else-if="message.message_type === 'sticker' && message.media_url" class="mb-2">
+                  <div v-if="isMediaLoading(message)" class="w-[128px] h-[128px] bg-muted rounded-lg animate-pulse flex items-center justify-center">
+                    <span class="text-muted-foreground text-sm">Loading...</span>
+                  </div>
+                  <img
+                    v-else-if="getMediaBlobUrl(message)"
+                    :src="getMediaBlobUrl(message)"
+                    alt="Sticker"
+                    class="max-w-[128px] max-h-[128px] cursor-pointer"
+                    @click="openMediaPreview(message)"
+                    @error="handleImageError($event)"
+                  />
+                  <div v-else class="w-[128px] h-[128px] bg-muted rounded-lg flex items-center justify-center">
+                    <span class="text-muted-foreground text-sm">[Sticker]</span>
+                  </div>
+                </div>
                 <!-- Video message -->
                 <div v-else-if="message.message_type === 'video' && message.media_url" class="mb-2">
                   <div v-if="isMediaLoading(message)" class="w-[200px] h-[150px] bg-muted rounded-lg animate-pulse flex items-center justify-center">
@@ -1082,6 +1102,13 @@ async function sendMediaMessage() {
                         <span class="truncate">{{ contact.phones.join(', ') }}</span>
                       </div>
                     </div>
+                  </div>
+                </div>
+                <!-- Unsupported message -->
+                <div v-else-if="message.message_type === 'unsupported'" class="mb-2">
+                  <div class="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg text-muted-foreground">
+                    <AlertCircle class="h-4 w-4 shrink-0" />
+                    <span class="text-sm italic">This message type is not supported</span>
                   </div>
                 </div>
                 <!-- Text content (for text messages or captions) -->
