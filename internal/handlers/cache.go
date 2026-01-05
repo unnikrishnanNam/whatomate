@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	// Cache TTLs
-	settingsCacheTTL       = 5 * time.Minute
-	flowsCacheTTL          = 5 * time.Minute
-	keywordRulesCacheTTL   = 5 * time.Minute
-	whatsappAccountCacheTTL = 10 * time.Minute
-	webhooksCacheTTL       = 5 * time.Minute
+	// Cache TTLs - 6 hours since these rarely change (invalidated on update anyway)
+	settingsCacheTTL        = 6 * time.Hour
+	flowsCacheTTL           = 6 * time.Hour
+	keywordRulesCacheTTL    = 6 * time.Hour
+	whatsappAccountCacheTTL = 6 * time.Hour
+	webhooksCacheTTL        = 6 * time.Hour
 
 	// Cache key prefixes
 	settingsCachePrefix        = "chatbot:settings:"
