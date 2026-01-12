@@ -83,7 +83,7 @@ class WebSocketService {
     const basePath = ((window as any).__BASE_PATH__ ?? '').replace(/\/$/, '')
     const url = `${protocol}//${host}${basePath}/ws?token=${token}`
 
-    console.log('Connecting to WebSocket:', url)
+    console.log('Connecting to WebSocket...')
 
     try {
       this.ws = new WebSocket(url)
