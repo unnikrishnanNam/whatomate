@@ -611,9 +611,9 @@ func TestApp_SendOutgoingMessage_TemplateMessage(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, msg)
 
-	// Verify template message was saved
+	// Verify template message was saved with rendered content
 	assert.Equal(t, models.MessageTypeTemplate, msg.MessageType)
-	assert.Contains(t, msg.Content, "Hello World Template")
+	assert.Equal(t, "Hello John! Your order ORD-123 is ready.", msg.Content)
 
 	// Verify template metadata
 	assert.NotNil(t, msg.Metadata)
