@@ -5,11 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
   DialogContent,
@@ -179,7 +177,8 @@ async function fetchAccounts() {
   }
 }
 
-function onAccountChange(value: string) {
+function onAccountChange(value: string | number | bigint | Record<string, any> | null) {
+  if (typeof value !== 'string') return
   localStorage.setItem('templates_selected_account', value)
   fetchTemplates()
 }
@@ -835,7 +834,7 @@ function formatPreview(text: string, samples: any[]): string {
             <Textarea
               v-model="formData.body_content"
               placeholder="Hi {{1}}, your order #{{2}} has been confirmed... (or use named: {{name}}, {{order_id}})"
-              rows="4"
+              :rows="4"
             />
             <p class="text-xs text-muted-foreground">
               Use <span v-pre>{{name}}</span>, <span v-pre>{{order_id}}</span> for named variables or <span v-pre>{{1}}</span>, <span v-pre>{{2}}</span> for positional variables

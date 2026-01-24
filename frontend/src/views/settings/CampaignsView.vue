@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { RangeCalendar } from '@/components/ui/range-calendar'
@@ -18,7 +17,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
 } from '@/components/ui/dialog'
 import {
   AlertDialog,
@@ -74,8 +72,6 @@ import {
   MessageSquare
 } from 'lucide-vue-next'
 import { formatDate } from '@/lib/utils'
-import type { DateRange } from 'reka-ui'
-import { CalendarDate } from '@internationalized/date'
 
 interface Campaign {
   id: string
@@ -154,7 +150,7 @@ const editingCampaignId = ref<string | null>(null) // null = create mode, string
 const filterStatus = ref<string>('all')
 type TimeRangePreset = 'today' | '7days' | '30days' | 'this_month' | 'custom'
 const selectedRange = ref<TimeRangePreset>('this_month')
-const customDateRange = ref<DateRange>({ start: undefined, end: undefined })
+const customDateRange = ref<any>({ start: undefined, end: undefined })
 const isDatePickerOpen = ref(false)
 
 const statusOptions = [
@@ -298,36 +294,12 @@ const recipientPlaceholder = computed(() => {
     return `${p}_value`
   })
   const line1 = `+1234567890, ${exampleValues.join(', ')}`
-  const line2 = `+0987654321, ${exampleValues.map((v, i) => {
+  const line2 = `+0987654321, ${exampleValues.map((v) => {
     if (v === 'John Doe') return 'Jane Smith'
     if (v === 'ORD-123') return 'ORD-456'
     return v
   }).join(', ')}`
   return `${line1}\n${line2}`
-})
-
-// Check if selected campaign's template has media header
-const campaignTemplateHasMedia = computed(() => {
-  if (!selectedCampaign.value?.template_id) return false
-  const template = templates.value.find(t => t.id === selectedCampaign.value?.template_id)
-  return template?.header_type && template.header_type !== 'TEXT'
-})
-
-const campaignTemplateMediaType = computed(() => {
-  if (!selectedCampaign.value?.template_id) return null
-  const template = templates.value.find(t => t.id === selectedCampaign.value?.template_id)
-  return template?.header_type || null
-})
-
-// Get accepted file types based on template header type
-const acceptedMediaTypes = computed(() => {
-  const type = campaignTemplateMediaType.value
-  switch (type) {
-    case 'IMAGE': return 'image/jpeg,image/png'
-    case 'VIDEO': return 'video/mp4,video/3gpp'
-    case 'DOCUMENT': return 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    default: return '*/*'
-  }
 })
 
 function handleMediaFileSelect(event: Event) {
@@ -1774,7 +1746,7 @@ async function addRecipientsFromCSV() {
                   id="recipients"
                   v-model="recipientsInput"
                   :placeholder="recipientPlaceholder"
-                  rows="8"
+                  :rows="8"
                   class="font-mono text-sm"
                   :disabled="isAddingRecipients"
                 />

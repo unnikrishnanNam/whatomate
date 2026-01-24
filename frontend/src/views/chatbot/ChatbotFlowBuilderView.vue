@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -108,6 +108,8 @@ interface PanelFieldConfig {
   key: string
   label: string
   order: number
+  display_type?: string
+  color?: string
 }
 
 interface PanelSection {
@@ -162,7 +164,7 @@ const maxPanelWidth = 500
 const minStepsPanelWidth = 200
 const maxStepsPanelWidth = 400
 
-function startResizeRight(e: MouseEvent) {
+function startResizeRight(_e: MouseEvent) {
   isResizingRight.value = true
   document.addEventListener('mousemove', handleResizeRight)
   document.addEventListener('mouseup', stopResizeRight)
@@ -184,7 +186,7 @@ function stopResizeRight() {
   document.body.style.userSelect = ''
 }
 
-function startResizeLeft(e: MouseEvent) {
+function startResizeLeft(_e: MouseEvent) {
   isResizingLeft.value = true
   document.addEventListener('mousemove', handleResizeLeft)
   document.addEventListener('mouseup', stopResizeLeft)
@@ -400,7 +402,7 @@ async function fetchWhatsAppFlows() {
 async function fetchTeams() {
   try {
     const response = await teamsService.list()
-    const data = response.data.data || response.data
+    const data = (response.data as any).data || response.data
     teams.value = (data.teams || []).filter((t: Team) => t.is_active)
   } catch (error) {
     console.error('Failed to load teams:', error)
@@ -539,8 +541,8 @@ function setMessageType(type: string) {
   }
 }
 
-function setInputType(type: string) {
-  if (!selectedStep.value) return
+function setInputType(type: string | number | bigint | Record<string, any> | null) {
+  if (!selectedStep.value || typeof type !== 'string') return
 
   selectedStep.value.input_type = type
 
@@ -611,8 +613,8 @@ function getButtonNextStep(buttonId: string): string {
   return target || '__default__'
 }
 
-function setButtonNextStep(buttonId: string, targetStep: string) {
-  if (!selectedStep.value) return
+function setButtonNextStep(buttonId: string, targetStep: string | number | bigint | Record<string, any> | null) {
+  if (!selectedStep.value || typeof targetStep !== 'string') return
   if (!selectedStep.value.conditional_next) {
     selectedStep.value.conditional_next = {}
   }
@@ -699,7 +701,8 @@ function removePanelSection(index: number) {
   formData.value.panel_config.sections.forEach((s, i) => s.order = i + 1)
 }
 
-function addFieldToSection(sectionIndex: number, variableKey: string) {
+function addFieldToSection(sectionIndex: number, variableKey: string | number | bigint | Record<string, any> | null) {
+  if (typeof variableKey !== 'string') return
   const variable = availableVariables.value.find(v => v.key === variableKey)
   if (!variable) return
 
@@ -709,10 +712,8 @@ function addFieldToSection(sectionIndex: number, variableKey: string) {
   section.fields.push({
     key: variableKey,
     label: variableKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    order: section.fields.length + 1,
-    display_type: 'text',
-    color: 'default'
-  })
+    order: section.fields.length + 1
+  } as any)
 }
 
 function removeFieldFromSection(sectionIndex: number, fieldIndex: number) {
@@ -978,9 +979,9 @@ function confirmCancel() {
         <!-- Step Preview (when editing a step) -->
         <template v-else>
           <FlowPreviewPanel
-            :steps="formData.steps"
-            :flow-data="formData"
-            :selected-step="selectedStep"
+            :steps="formData.steps as any"
+            :flow-data="formData as any"
+            :selected-step="selectedStep as any"
             :selected-step-index="selectedStepIndex"
             :list-picker-open="listPickerOpen"
             :teams="teams"
@@ -1110,7 +1111,7 @@ function confirmCancel() {
                           <Plus class="h-3 w-3" />
                         </Button>
                       </div>
-                      <div v-for="(value, key) in formData.completion_config.headers" :key="key" class="flex gap-1">
+                      <div v-for="(_value, key) in formData.completion_config.headers" :key="key" class="flex gap-1">
                         <Input
                           :model-value="key"
                           placeholder="Key"
@@ -1440,7 +1441,7 @@ function confirmCancel() {
                           <Plus class="h-3 w-3" />
                         </Button>
                       </div>
-                      <div v-for="(value, key) in selectedStep.api_config.headers" :key="key" class="flex gap-1">
+                      <div v-for="(_value, key) in selectedStep.api_config.headers" :key="key" class="flex gap-1">
                         <Input
                           :model-value="key"
                           placeholder="Key"
@@ -1472,7 +1473,7 @@ function confirmCancel() {
                           <Plus class="h-3 w-3" />
                         </Button>
                       </div>
-                      <div v-for="(value, key) in selectedStep.api_config.response_mapping" :key="key" class="flex gap-1 items-center">
+                      <div v-for="(_value, key) in selectedStep.api_config.response_mapping" :key="key" class="flex gap-1 items-center">
                         <Input
                           :model-value="key"
                           placeholder="Variable"

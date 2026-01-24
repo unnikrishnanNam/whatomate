@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -126,7 +126,8 @@ async function fetchAccounts() {
   }
 }
 
-function onAccountChange(value: string) {
+function onAccountChange(value: string | number | bigint | Record<string, any> | null) {
+  if (typeof value !== 'string') return
   localStorage.setItem('flows_selected_account', value)
   fetchFlows()
 }
@@ -134,9 +135,6 @@ function onAccountChange(value: string) {
 async function fetchFlows() {
   isLoading.value = true
   try {
-    const params = selectedAccount.value && selectedAccount.value !== 'all'
-      ? `?account=${selectedAccount.value}`
-      : ''
     const response = await flowsService.list()
     flows.value = response.data.data?.flows || []
 

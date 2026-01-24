@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -79,8 +78,8 @@ const ruleToDelete = ref<KeywordRule | null>(null)
 
 const formData = ref({
   keywords: '',
-  match_type: 'contains' as const,
-  response_type: 'text' as const,
+  match_type: 'contains' as 'exact' | 'contains' | 'regex',
+  response_type: 'text' as 'template' | 'text' | 'flow' | 'transfer',
   response_content: '',
   buttons: [] as ButtonItem[],
   priority: 0,
@@ -211,7 +210,7 @@ async function confirmDeleteRule() {
   }
 }
 
-async function toggleRule(rule: KeywordRule) {
+async function _toggleRule(rule: KeywordRule) {
   try {
     await chatbotService.updateKeyword(rule.id, { enabled: !rule.enabled })
     rule.enabled = !rule.enabled
@@ -220,6 +219,7 @@ async function toggleRule(rule: KeywordRule) {
     toast.error('Failed to toggle rule')
   }
 }
+void _toggleRule // Reserved for future use
 
 const filteredRules = computed(() => {
   if (!searchQuery.value) return rules.value
@@ -487,12 +487,18 @@ const filteredRules = computed(() => {
           <p class="text-lg font-medium text-white light:text-gray-900">No matching rules</p>
           <p class="text-sm">No keyword rules match "{{ searchQuery }}"</p>
         </div>
-        <div v-else-if="rules.length === 0" class="text-center py-12 text-white/50 light:text-gray-500">
-          <div class="h-16 w-16 rounded-xl bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
-            <Key class="h-8 w-8 text-blue-400" />
+        <div v-else-if="rules.length === 0" class="rounded-xl border border-white/[0.08] bg-white/[0.02] light:bg-white light:border-gray-200">
+          <div class="py-12 text-center text-white/50 light:text-gray-500">
+            <div class="h-16 w-16 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/20">
+              <Key class="h-8 w-8 text-white" />
+            </div>
+            <p class="text-lg font-medium text-white light:text-gray-900">No keyword rules yet</p>
+            <p class="text-sm mb-4">Create your first keyword rule to get started.</p>
+            <Button variant="outline" size="sm" @click="openCreateDialog">
+              <Plus class="h-4 w-4 mr-2" />
+              Create Rule
+            </Button>
           </div>
-          <p class="text-lg font-medium text-white light:text-gray-900">No keyword rules yet</p>
-          <p class="text-sm">Create your first keyword rule to get started.</p>
         </div>
         </template>
       </div>
