@@ -4,7 +4,7 @@
 
 Modern, open-source WhatsApp Business Platform. Single binary app.
 
-![Dashboard](docs/public/images/01-dashboard.png)
+![Dashboard](docs/public/images/dashboard-dark.png)
 
 ## Features
 
@@ -38,8 +38,13 @@ Modern, open-source WhatsApp Business Platform. Single binary app.
 <details>
 <summary>View more screenshots</summary>
 
-![Chatbot Settings](docs/public/images/02-chatbot-settings.png)
-![Conversation Flow Builder](docs/public/images/08-conversation-flow-builder.png)
+![Dashboard Light](docs/public/images/dashboard-light.png)
+![Chatbot Dark](docs/public/images/chatbot-dark.png)
+![Chatbot Light](docs/public/images/chatbot-light.png)
+![Agent Analytics Dark](docs/public/images/agent-analytics-dark.png)
+![Agent Analytics Light](docs/public/images/agent-analytics-light.png)
+![Conversation Flow Builder Dark](docs/public/images/conversation-flow-dark.png)
+![Conversation Flow Builder Light](docs/public/images/conversation-flow-light.png)
 ![Templates](docs/public/images/11-templates.png)
 ![Campaigns](docs/public/images/13-campaigns.png)
 
