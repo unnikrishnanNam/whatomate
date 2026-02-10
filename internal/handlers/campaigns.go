@@ -1016,16 +1016,17 @@ func (a *App) incrementCampaignStat(campaignID string, status string) {
 	campaign.ID = campaignUUID
 
 	// atomic update and return updated record
-	if err := a.DB.Model(&campaign).
+	result := a.DB.Model(&campaign).
 		Clauses(clause.Returning{}).
-		Where("id = ?", campaignUUID).
-		Update(column, gorm.Expr(column+" + 1")).Error; err != nil {
-		a.Log.Error("Failed to increment campaign stat", "error", err, "campaign_id", campaignID, "column", column)
+		Update(column, gorm.Expr(column+" + 1"))
+
+	if result.Error != nil {
+		a.Log.Error("Failed to increment campaign stat", "error", result.Error, "campaign_id", campaignID, "column", column)
 		return
 	}
 
 	// Broadcast stats update via WebSocket
-	if a.WSHub != nil {
+	if a.WSHub != nil && result.RowsAffected > 0 {
 		a.WSHub.BroadcastToOrg(campaign.OrganizationID, websocket.WSMessage{
 			Type: websocket.TypeCampaignStatsUpdate,
 			Payload: map[string]interface{}{
